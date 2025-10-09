@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <users>
+    <item>
+      <id>1</id>
+      <name>Alice</name>
+      <email>alice@example.com</email>
+    </item>
+    <item>
+      <id>2</id>
+      <name>Bob</name>
+      <email>bob@example.com</email>
+    </item>
+  </users>
+  <metadata>
+    <version>1.0</version>
+    <count>2</count>
+  </metadata>
+</root>

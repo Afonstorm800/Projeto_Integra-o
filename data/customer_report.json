@@ -1,0 +1,36 @@
+{
+  "customers": [
+    {
+      "id": 1,
+      "name": "JOÃO SILVA",
+      "email": "joao.silva@example.com",
+      "phone": "+11 (98) 76543-21",
+      "cpf": "123.456.789-01",
+      "revenue": 1500.5
+    },
+    {
+      "id": 2,
+      "name": "Maria Santos",
+      "email": "maria@example.com",
+      "phone": "+21 (98) 76543-21",
+      "cpf": "123.456.789-09",
+      "revenue": 2800.75
+    },
+    {
+      "id": 3,
+      "name": "Pedro Costa",
+      "email": "pedro.costa@example.com",
+      "phone": "+11 (98) 76543-21",
+      "cpf": "987.654.321-00",
+      "revenue": 3200.0
+    }
+  ],
+  "metrics": {
+    "total_customers": 3,
+    "total_revenue": 7501.25,
+    "average_revenue": 2500.4166666666665,
+    "max_revenue": 3200.0,
+    "min_revenue": 1500.5
+  },
+  "report_date": "2024-10-09"
+}

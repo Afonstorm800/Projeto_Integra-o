@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <customers>
+    <item>
+      <id>1</id>
+      <name>JOÃO SILVA</name>
+      <email>joao.silva@example.com</email>
+      <phone>+11 (98) 76543-21</phone>
+      <cpf>123.456.789-01</cpf>
+      <revenue>1500.5</revenue>
+    </item>
+    <item>
+      <id>2</id>
+      <name>Maria Santos</name>
+      <email>maria@example.com</email>
+      <phone>+21 (98) 76543-21</phone>
+      <cpf>123.456.789-09</cpf>
+      <revenue>2800.75</revenue>
+    </item>
+    <item>
+      <id>3</id>
+      <name>Pedro Costa</name>
+      <email>pedro.costa@example.com</email>
+      <phone>+11 (98) 76543-21</phone>
+      <cpf>987.654.321-00</cpf>
+      <revenue>3200.0</revenue>
+    </item>
+  </customers>
+  <metrics>
+    <total_customers>3</total_customers>
+    <total_revenue>7501.25</total_revenue>
+    <average_revenue>2500.4166666666665</average_revenue>
+    <max_revenue>3200.0</max_revenue>
+    <min_revenue>1500.5</min_revenue>
+  </metrics>
+  <report_date>2024-10-09</report_date>
+</root>
