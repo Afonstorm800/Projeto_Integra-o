@@ -1,0 +1,888 @@
+[
+    {
+        "id": "real-time-dashboard",
+        "type": "tab",
+        "label": "Real-time Monitoring",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "process-real-time",
+        "type": "function",
+        "z": "real-time-dashboard",
+        "name": "Process Real-time Data",
+        "func": "// Fixed Real-time Monitoring Dashboard Function\ntry {\n    let payload = msg.payload;\n    \n    if (payload.data) {\n        payload = payload.data;\n    }\n    \n    let events = [];\n    \n    if (Array.isArray(payload)) {\n        events = payload;\n    } else if (typeof payload === 'object') {\n        events = [payload];\n    }\n    \n    // Transform events\n    const transformedEvents = events.map((event, index) => {\n        const getValue = (key, altKey) => {\n            return event[key] || event[altKey] || 'N/A';\n        };\n        \n        return {\n            id: getValue('En No', 'en_no') || `EVT-${index}`,\n            description: getValue('Event Desc', 'event_desc'),\n            site: getValue('Site Name', 'site_name'),\n            licensee: getValue('Licensee Name', 'licensee_name'),\n            city: getValue('City Name', 'city_name'),\n            state: getValue('State Cd', 'state_cd'),\n            eventDate: getValue('Event Date', 'event_date'),\n            notificationDate: getValue('Notification Date', 'notification_date'),\n            emergencyClass: getValue('Emergency Class', 'emergency_class'),\n            category: getValue('Event Category', 'event_category'),\n            region: getValue('Region No', 'region_no'),\n            lastUpdated: getValue('Last Updated Date', 'last_updated_date'),\n            receivedAt: new Date().toISOString(),\n            severity: extractSeverity(getValue('Event Text', 'event_text')),\n            status: 'New'\n        };\n    });\n    \n    function extractSeverity(eventText) {\n        if (!eventText) return 'Unknown';\n        const text = eventText.toLowerCase();\n        if (text.includes('medical event')) return 'High';\n        if (text.includes('equipment failure')) return 'Medium';\n        if (text.includes('stuck open') || text.includes('damaged')) return 'Medium';\n        return 'Low';\n    }\n    \n    // Calculate statistics\n    const stats = {\n        total: transformedEvents.length,\n        byCategory: {},\n        byState: {},\n        bySeverity: { High: 0, Medium: 0, Low: 0, Unknown: 0 },\n        recent: transformedEvents.slice(0, 10),\n        criticalAlerts: transformedEvents.filter(e => e.severity === 'High')\n    };\n    \n    transformedEvents.forEach(event => {\n        stats.byCategory[event.category] = (stats.byCategory[event.category] || 0) + 1;\n        stats.byState[event.state] = (stats.byState[event.state] || 0) + 1;\n        stats.bySeverity[event.severity] = (stats.bySeverity[event.severity] || 0) + 1;\n    });\n    \n    // Create main message for tables and alerts\n    const mainMsg = {\n        payload: {\n            events: transformedEvents,\n            stats: stats,\n            lastUpdate: new Date().toLocaleString(),\n            totalEvents: transformedEvents.length,\n            criticalCount: stats.criticalAlerts.length,\n            stateCounts: stats.byState\n        }\n    };\n    \n    // Create status message\n    const statusMsg = {\n        payload: `🔄 REAL-TIME: ${transformedEvents.length} events, ${stats.criticalAlerts.length} critical`\n    };\n    \n    // Create chart data in EXACT format needed by ui_chart nodes\n    const severityChartData = {\n        series: [\"Count\"],\n        data: [\n            [stats.bySeverity.High || 0],\n            [stats.bySeverity.Medium || 0], \n            [stats.bySeverity.Low || 0],\n            [stats.bySeverity.Unknown || 0]\n        ],\n        labels: [\"High\", \"Medium\", \"Low\", \"Unknown\"]\n    };\n    \n    const categoryChartData = {\n        series: [\"Count\"],\n        data: Object.entries(stats.byCategory).map(([_, count]) => [count]),\n        labels: Object.keys(stats.byCategory)\n    };\n    \n    const timelineChartData = {\n        series: [\"Events\"],\n        data: [[transformedEvents.length]],\n        labels: [new Date().toLocaleTimeString()]\n    };\n    \n    node.status({fill:\"green\", shape:\"dot\", text: `Monitoring ${transformedEvents.length} events`});\n    \n    // Return all messages\n    return [mainMsg, statusMsg, {payload: severityChartData}, {payload: categoryChartData}, {payload: timelineChartData}];\n    \n} catch (error) {\n    node.status({fill:\"red\", shape:\"ring\", text: \"Processing error\"});\n    const errorMsg = { payload: `❌ ERROR: ${error.message}` };\n    return [null, errorMsg, null, null, null];\n}",
+        "outputs": 5,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 140,
+        "wires": [
+            [
+                "alert-panel",
+                "events-table",
+                "state-map"
+            ],
+            [
+                "status-display"
+            ],
+            [
+                "severity-chart"
+            ],
+            [
+                "category-chart"
+            ],
+            [
+                "timeline-chart"
+            ]
+        ]
+    },
+    {
+        "id": "alert-panel",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "real-time-group",
+        "name": "Critical Alerts",
+        "order": 1,
+        "width": 4,
+        "height": 6,
+        "format": "<div style=\"padding: 15px; background: #1e1e1e; color: white; border-radius: 10px; height: 100%;\">\n    <h3 style=\"color: #ff6b6b; margin-bottom: 20px;\">🚨 Critical Alerts</h3>\n    <div style=\"max-height: 300px; overflow-y: auto;\">\n        <div ng-repeat=\"event in msg.payload.events | filter: {severity: 'High'}\" \n             style=\"background: #dc3545; margin: 10px 0; padding: 10px; border-radius: 5px; border-left: 4px solid #ffeb3b;\">\n            <strong>{{event.id}}</strong> - {{event.description}}\n            <br><small>{{event.site}}, {{event.state}}</small>\n            <br><small>{{event.eventDate}}</small>\n        </div>\n        <div ng-if=\"!(msg.payload.events | filter: {severity: 'High'}).length\" \n             style=\"text-align: center; color: #ccc; padding: 20px;\">\n            No critical alerts\n        </div>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 630,
+        "y": 100,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "events-table",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "real-time-group",
+        "name": "All Events Table",
+        "order": 2,
+        "width": 8,
+        "height": 8,
+        "format": "<div style=\"padding: 20px; font-family: Arial, sans-serif;\">\n    <h2 style=\"color: #2c3e50; margin-bottom: 20px;\">📊 Nuclear Events Monitor</h2>\n    \n    <div style=\"background: #e8f4fd; padding: 15px; border-radius: 5px; margin-bottom: 20px;\">\n        <strong>Total Events: {{msg.payload.totalEvents || 0}}</strong> | \n        Critical Alerts: {{msg.payload.criticalCount || 0}} |\n        Last Updated: {{msg.payload.lastUpdate || 'Never'}}\n    </div>\n    \n    <div style=\"overflow-x: auto; border: 1px solid #ddd; border-radius: 5px; max-height: 500px; overflow-y: auto;\">\n        <table style=\"width: 100%; border-collapse: collapse; font-size: 14px;\">\n            <thead style=\"background-color: #f8f9fa; position: sticky; top: 0;\">\n                <tr>\n                    <th style=\"padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;\">ID</th>\n                    <th style=\"padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;\">Description</th>\n                    <th style=\"padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;\">Site</th>\n                    <th style=\"padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;\">State</th>\n                    <th style=\"padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;\">Category</th>\n                    <th style=\"padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;\">Severity</th>\n                    <th style=\"padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6;\">Event Date</th>\n                </tr>\n            </thead>\n            <tbody>\n                <tr ng-repeat=\"event in msg.payload.events\" \n                    style=\"border-bottom: 1px solid #dee2e6; {{$even && 'background-color: #f8f9fa;' || ''}}\">\n                    <td style=\"padding: 10px; font-weight: bold;\">{{event.id}}</td>\n                    <td style=\"padding: 10px;\">{{event.description}}</td>\n                    <td style=\"padding: 10px;\">{{event.site}}</td>\n                    <td style=\"padding: 10px;\">{{event.state}}</td>\n                    <td style=\"padding: 10px;\">\n                        <span style=\"padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; background-color: \n                            {{event.category === 'MEDICAL EVENT' ? '#dc3545' : \n                              event.category === 'EQUIPMENT FAILURE' ? '#fd7e14' : \n                              event.category === 'DAMAGED' ? '#ffc107' : '#6c757d'}};\">\n                            {{event.category}}\n                        </span>\n                    </td>\n                    <td style=\"padding: 10px;\">\n                        <span style=\"padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; background-color: \n                            {{event.severity === 'High' ? '#dc3545' : \n                              event.severity === 'Medium' ? '#ffc107' : \n                              event.severity === 'Low' ? '#28a745' : '#6c757d'}};\">\n                            {{event.severity}}\n                        </span>\n                    </td>\n                    <td style=\"padding: 10px;\">{{event.eventDate}}</td>\n                </tr>\n                <tr ng-if=\"!msg.payload.events || msg.payload.events.length === 0\">\n                    <td colspan=\"7\" style=\"padding: 20px; text-align: center; color: #6c757d;\">\n                        No events received yet. Send data from Knime/Flask to see events here.\n                    </td>\n                </tr>\n            </tbody>\n        </table>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 640,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "state-map",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "real-time-group",
+        "name": "State Distribution",
+        "order": 3,
+        "width": 4,
+        "height": 6,
+        "format": "<div style=\"padding: 15px; background: white; border-radius: 10px; height: 100%;\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 15px;\">🗺️ Events by State</h3>\n    <div style=\"display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;\">\n        <div ng-repeat=\"(state, count) in msg.payload.stateCounts\" \n             style=\"background: #e8f4fd; padding: 8px; border-radius: 5px; text-align: center; border: 1px solid #b3d9ff;\">\n            <strong style=\"display: block; font-size: 12px;\">{{state}}</strong>\n            <span style=\"font-size: 16px; font-weight: bold; color: #007bff;\">{{count}}</span>\n        </div>\n        <div ng-if=\"!msg.payload.stateCounts || Object.keys(msg.payload.stateCounts).length === 0\" \n             style=\"grid-column: 1 / -1; text-align: center; color: #6c757d; padding: 20px;\">\n            No state data available\n        </div>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 650,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "status-display",
+        "type": "ui_text",
+        "z": "real-time-dashboard",
+        "group": "real-time-group",
+        "order": 0,
+        "width": 12,
+        "height": 1,
+        "name": "Status Display",
+        "label": "Status:",
+        "format": "{{msg.payload}}",
+        "layout": "row-center",
+        "x": 640,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "severity-chart",
+        "type": "ui_chart",
+        "z": "real-time-dashboard",
+        "name": "Severity Distribution",
+        "group": "real-time-group",
+        "order": 4,
+        "width": 4,
+        "height": 4,
+        "label": "Severity Levels",
+        "chartType": "pie",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "No data",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "colors": [
+            "#dc3545",
+            "#ffc107",
+            "#28a745",
+            "#6c757d"
+        ],
+        "outputs": 0,
+        "x": 660,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "category-chart",
+        "type": "ui_chart",
+        "z": "real-time-dashboard",
+        "name": "Events by Category",
+        "group": "real-time-group",
+        "order": 5,
+        "width": 4,
+        "height": 4,
+        "label": "Events by Category",
+        "chartType": "bar",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "No data",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "colors": [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b"
+        ],
+        "outputs": 0,
+        "x": 650,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "timeline-chart",
+        "type": "ui_chart",
+        "z": "real-time-dashboard",
+        "name": "Events Timeline",
+        "group": "real-time-group",
+        "order": 6,
+        "width": 4,
+        "height": 4,
+        "label": "Events Over Time",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "No data",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "colors": [
+            "#dc3545"
+        ],
+        "outputs": 0,
+        "x": 640,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "test-inject-real-time",
+        "type": "inject",
+        "z": "real-time-dashboard",
+        "name": "Test with Sample Data",
+        "props": [
+            {
+                "p": "payload",
+                "v": "{\"metadata\":{\"source\":\"knime_etl_workflow\",\"received_at\":\"2025-10-16T18:23:40.285686\",\"batch_id\":\"20251016_182340\",\"version\":\"1.0\",\"validation\":{\"is_valid\":true,\"errors\":[],\"record_count\":3,\"data_type\":\"list\"}},\"data\":[{\"Event Desc\":\"Agreement State\",\"En No\":57747,\"Site Name\":\"SC Dept of Health & Env Control\",\"Licensee Name\":\"Medical University Hospital\",\"Region No\":1,\"City Name\":\"Charleston\",\"State Cd\":\"SC\",\"County Name\":\"Oconee\",\"License No\":\"081\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Adam Gause\",\"Ops Officer\":\"Brian P. Smith\",\"Notification Date\":\"2025-06-06T12:14\",\"Event Date\":\"2025-06-05T00:00\",\"Time Zone\":\"UTC-4\",\"Last Updated Date\":\"2025-09-18T14:20\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"26.719\",\"Cfr Descr1\":\"Agreement State\",\"Staff Name1\":\"Henrion, Mark\",\"Org Abbrev1\":\"R1DO\",\"Staff Name2\":\"NMSS_EVENTS_NOTIFICATION\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/19/2025  EN Revision Text: AGREEMENT STATE REPORT - MEDICAL EVENT\",\"Event Category\":\"MEDICAL EVENT\"},{\"Event Desc\":\"Agreement State\",\"En No\":57818,\"Site Name\":\"Illinois Emergency Mgmt. Agency\",\"Licensee Name\":\"Isomedix Operations, Inc.\",\"Region No\":3,\"City Name\":\"Libertyville\",\"State Cd\":\"IL\",\"County Name\":\"Oconee\",\"License No\":\"IL-01123-02\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Robin G. Muzzalupo\",\"Ops Officer\":\"Josue Ramirez\",\"Notification Date\":\"2025-07-17T16:20\",\"Event Date\":\"2025-07-16T00:00\",\"Time Zone\":\"UTC-5\",\"Last Updated Date\":\"2025-09-12T12:47\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"26.719\",\"Cfr Descr1\":\"Agreement State\",\"Staff Name1\":\"Nguyen, April\",\"Org Abbrev1\":\"R3DO\",\"Staff Name2\":\"NMSS_EVENTS_NOTIFICATION\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/15/2025  EN Revision Text: AGREEMENT STATE REPORT - EQUIPMENT FAILURE\",\"Event Category\":\"EQUIPMENT FAILURE\"},{\"Event Desc\":\"Part 21\",\"En No\":57827,\"Site Name\":\"Curtiss Wright Flow Control Co.\",\"Licensee Name\":\"Duke Energy Nuclear Llc\",\"Region No\":3,\"City Name\":\"Cincinnati\",\"State Cd\":\"OH\",\"County Name\":\"Oconee\",\"License No\":\"IL-02062-01\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Margie Hover\",\"Ops Officer\":\"Kerby Scales\",\"Notification Date\":\"2025-07-25T09:47\",\"Event Date\":\"2025-05-21T00:00\",\"Time Zone\":\"UTC-4\",\"Last Updated Date\":\"2025-09-23T10:33\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"21.21(a)(2)\",\"Cfr Descr1\":\"Interim Eval Of Deviation\",\"Staff Name1\":\"Zurawski, Paul\",\"Org Abbrev1\":\"R3DO\",\"Staff Name2\":\"Part 21/50.55 Reactors, -\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/24/2025  EN Revision Text: PART 21 INTERIM REPORT OF DEVIATION\",\"Event Category\":\"DEVIATION\"}]}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 120,
+        "y": 60,
+        "wires": [
+            [
+                "process-real-time"
+            ]
+        ]
+    },
+    {
+        "id": "6941437cb5a9eb7d",
+        "type": "http in",
+        "z": "real-time-dashboard",
+        "name": "",
+        "url": "/api/knime-data",
+        "method": "post",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 100,
+        "y": 140,
+        "wires": [
+            [
+                "process-real-time",
+                "25e199a347dd06eb",
+                "447f24795f9aeaf9",
+                "92a882e26cb55f7f",
+                "process-geographic",
+                "process-timeline",
+                "process-risk"
+            ]
+        ]
+    },
+    {
+        "id": "25e199a347dd06eb",
+        "type": "function",
+        "z": "real-time-dashboard",
+        "name": "Process KPI Data",
+        "func": "try {\n    let payload = msg.payload;\n    \n    if (payload.data) {\n        payload = payload.data;\n    }\n    \n    let events = [];\n    \n    if (Array.isArray(payload)) {\n        events = payload;\n    } else if (typeof payload === 'object') {\n        events = [payload];\n    }\n    \n    const transformedEvents = events.map((event, index) => {\n        const getValue = (key, altKey) => {\n            return event[key] || event[altKey] || 'N/A';\n        };\n        \n        return {\n            id: getValue('En No', 'en_no') || `EVT-${index}`,\n            description: getValue('Event Desc', 'event_desc'),\n            site: getValue('Site Name', 'site_name'),\n            state: getValue('State Cd', 'state_cd'),\n            category: getValue('Event Category', 'event_category'),\n            severity: extractSeverity(getValue('Event Text', 'event_text'))\n        };\n    });\n    \n    function extractSeverity(eventText) {\n        if (!eventText) return 'Low';\n        const text = eventText.toLowerCase();\n        if (text.includes('medical event')) return 'High';\n        if (text.includes('equipment failure')) return 'Medium';\n        return 'Low';\n    }\n    \n    // Calculate KPIs\n    const totalEvents = transformedEvents.length;\n    const highSeverity = transformedEvents.filter(e => e.severity === 'High').length;\n    const medicalEvents = transformedEvents.filter(e => e.category === 'MEDICAL EVENT').length;\n    const equipmentEvents = transformedEvents.filter(e => e.category.includes('EQUIPMENT') || e.category.includes('FAILURE')).length;\n    \n    // State counts\n    const stateCounts = {};\n    transformedEvents.forEach(event => {\n        stateCounts[event.state] = (stateCounts[event.state] || 0) + 1;\n    });\n    \n    const kpiMsg = {\n        payload: {\n            events: transformedEvents,\n            kpis: {\n                total: totalEvents,\n                highSeverity: highSeverity,\n                medicalEvents: medicalEvents,\n                equipmentEvents: equipmentEvents,\n                stateCounts: stateCounts\n            },\n            lastUpdate: new Date().toLocaleString()\n        }\n    };\n    \n    const statusMsg = {\n        payload: `📊 KPI: ${totalEvents} total, ${highSeverity} critical`\n    };\n    \n    return [kpiMsg, statusMsg];\n    \n} catch (error) {\n    const errorMsg = { payload: `❌ ERROR: ${error.message}` };\n    return [null, errorMsg];\n}",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 380,
+        "wires": [
+            [
+                "05a101167f30b998",
+                "1bb9d86f9957efdd",
+                "0e705b10d43c111b"
+            ],
+            [
+                "887e2536a2679dcf"
+            ]
+        ]
+    },
+    {
+        "id": "05a101167f30b998",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "90c6ec383a38acad",
+        "name": "KPI Cards",
+        "order": 1,
+        "width": 12,
+        "height": 2,
+        "format": "<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; padding: 15px;\">\n    <div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);\">\n        <div style=\"font-size: 28px; font-weight: bold;\">{{msg.payload.kpis.total}}</div>\n        <div style=\"font-size: 14px;\">📈 Total Events</div>\n    </div>\n    <div style=\"background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);\">\n        <div style=\"font-size: 28px; font-weight: bold;\">{{msg.payload.kpis.highSeverity}}</div>\n        <div style=\"font-size: 14px;\">🚨 Critical Events</div>\n    </div>\n    <div style=\"background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);\">\n        <div style=\"font-size: 28px; font-weight: bold;\">{{msg.payload.kpis.medicalEvents}}</div>\n        <div style=\"font-size: 14px;\">🏥 Medical Events</div>\n    </div>\n    <div style=\"background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);\">\n        <div style=\"font-size: 28px; font-weight: bold;\">{{msg.payload.kpis.equipmentEvents}}</div>\n        <div style=\"font-size: 14px;\">🔧 Equipment Issues</div>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 630,
+        "y": 420,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "1bb9d86f9957efdd",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "90c6ec383a38acad",
+        "name": "State Distribution",
+        "order": 2,
+        "width": 6,
+        "height": 6,
+        "format": "<div style=\"padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 100%;\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #f8f9fa; padding-bottom: 10px;\">🗺️ Events by State</h3>\n    <div style=\"display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-height: 300px; overflow-y: auto;\">\n        <div ng-repeat=\"(state, count) in msg.payload.kpis.stateCounts\" \n             style=\"background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid #90caf9;\">\n            <strong style=\"display: block; font-size: 12px; color: #1565c0;\">{{state}}</strong>\n            <span style=\"font-size: 20px; font-weight: bold; color: #0d47a1;\">{{count}}</span>\n        </div>\n        <div ng-if=\"!msg.payload.kpis.stateCounts || Object.keys(msg.payload.kpis.stateCounts).length === 0\" \n             style=\"grid-column: 1 / -1; text-align: center; color: #6c757d; padding: 20px;\">\n            No state data available\n        </div>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 650,
+        "y": 460,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0e705b10d43c111b",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "90c6ec383a38acad",
+        "name": "Recent Events",
+        "order": 3,
+        "width": 6,
+        "height": 6,
+        "format": "<div style=\"padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 100%;\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #f8f9fa; padding-bottom: 10px;\">📋 Recent Events</h3>\n    <div style=\"max-height: 300px; overflow-y: auto;\">\n        <div ng-repeat=\"event in msg.payload.events.slice(0, 8)\" \n             style=\"background: {{event.severity === 'High' ? '#ffebee' : event.severity === 'Medium' ? '#fff3e0' : '#e8f5e8'}}; \n                    margin: 8px 0; padding: 12px; border-radius: 8px; border-left: 4px solid \n                    {{event.severity === 'High' ? '#f44336' : event.severity === 'Medium' ? '#ff9800' : '#4caf50'}};\">\n            <div style=\"display: flex; justify-content: between; align-items: start;\">\n                <div style=\"flex: 1;\">\n                    <strong style=\"color: #2c3e50;\">{{event.id}}</strong>\n                    <div style=\"font-size: 12px; color: #6c757d; margin-top: 4px;\">{{event.description}}</div>\n                </div>\n                <span style=\"background: {{event.severity === 'High' ? '#f44336' : event.severity === 'Medium' ? '#ff9800' : '#4caf50'}}; \n                      color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold;\">\n                    {{event.severity}}\n                </span>\n            </div>\n            <div style=\"font-size: 11px; color: #6c757d; margin-top: 6px;\">\n                📍 {{event.site}}, {{event.state}} | 🏷️ {{event.category}}\n            </div>\n        </div>\n        <div ng-if=\"!msg.payload.events || msg.payload.events.length === 0\" \n             style=\"text-align: center; color: #6c757d; padding: 20px;\">\n            No events to display\n        </div>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 640,
+        "y": 500,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "887e2536a2679dcf",
+        "type": "ui_text",
+        "z": "real-time-dashboard",
+        "group": "90c6ec383a38acad",
+        "order": 0,
+        "width": 12,
+        "height": 1,
+        "name": "Status",
+        "label": "Status:",
+        "format": "{{msg.payload}}",
+        "layout": "row-center",
+        "x": 610,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "ac4333856be883b3",
+        "type": "inject",
+        "z": "real-time-dashboard",
+        "name": "Test KPI",
+        "props": [
+            {
+                "p": "payload",
+                "v": "{\"metadata\":{\"source\":\"knime_etl_workflow\",\"received_at\":\"2025-10-16T18:23:40.285686\",\"batch_id\":\"20251016_182340\",\"version\":\"1.0\",\"validation\":{\"is_valid\":true,\"errors\":[],\"record_count\":3,\"data_type\":\"list\"}},\"data\":[{\"Event Desc\":\"Agreement State\",\"En No\":57747,\"Site Name\":\"SC Dept of Health & Env Control\",\"Licensee Name\":\"Medical University Hospital\",\"Region No\":1,\"City Name\":\"Charleston\",\"State Cd\":\"SC\",\"County Name\":\"Oconee\",\"License No\":\"081\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Adam Gause\",\"Ops Officer\":\"Brian P. Smith\",\"Notification Date\":\"2025-06-06T12:14\",\"Event Date\":\"2025-06-05T00:00\",\"Time Zone\":\"UTC-4\",\"Last Updated Date\":\"2025-09-18T14:20\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"26.719\",\"Cfr Descr1\":\"Agreement State\",\"Staff Name1\":\"Henrion, Mark\",\"Org Abbrev1\":\"R1DO\",\"Staff Name2\":\"NMSS_EVENTS_NOTIFICATION\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/19/2025  EN Revision Text: AGREEMENT STATE REPORT - MEDICAL EVENT\",\"Event Category\":\"MEDICAL EVENT\"},{\"Event Desc\":\"Agreement State\",\"En No\":57818,\"Site Name\":\"Illinois Emergency Mgmt. Agency\",\"Licensee Name\":\"Isomedix Operations, Inc.\",\"Region No\":3,\"City Name\":\"Libertyville\",\"State Cd\":\"IL\",\"County Name\":\"Oconee\",\"License No\":\"IL-01123-02\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Robin G. Muzzalupo\",\"Ops Officer\":\"Josue Ramirez\",\"Notification Date\":\"2025-07-17T16:20\",\"Event Date\":\"2025-07-16T00:00\",\"Time Zone\":\"UTC-5\",\"Last Updated Date\":\"2025-09-12T12:47\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"26.719\",\"Cfr Descr1\":\"Agreement State\",\"Staff Name1\":\"Nguyen, April\",\"Org Abbrev1\":\"R3DO\",\"Staff Name2\":\"NMSS_EVENTS_NOTIFICATION\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/15/2025  EN Revision Text: AGREEMENT STATE REPORT - EQUIPMENT FAILURE\",\"Event Category\":\"EQUIPMENT FAILURE\"},{\"Event Desc\":\"Part 21\",\"En No\":57827,\"Site Name\":\"Curtiss Wright Flow Control Co.\",\"Licensee Name\":\"Duke Energy Nuclear Llc\",\"Region No\":3,\"City Name\":\"Cincinnati\",\"State Cd\":\"OH\",\"County Name\":\"Oconee\",\"License No\":\"IL-02062-01\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Margie Hover\",\"Ops Officer\":\"Kerby Scales\",\"Notification Date\":\"2025-07-25T09:47\",\"Event Date\":\"2025-05-21T00:00\",\"Time Zone\":\"UTC-4\",\"Last Updated Date\":\"2025-09-23T10:33\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"21.21(a)(2)\",\"Cfr Descr1\":\"Interim Eval Of Deviation\",\"Staff Name1\":\"Zurawski, Paul\",\"Org Abbrev1\":\"R3DO\",\"Staff Name2\":\"Part 21/50.55 Reactors, -\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/24/2025  EN Revision Text: PART 21 INTERIM REPORT OF DEVIATION\",\"Event Category\":\"DEVIATION\"}]}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 140,
+        "y": 380,
+        "wires": [
+            [
+                "25e199a347dd06eb"
+            ]
+        ]
+    },
+    {
+        "id": "447f24795f9aeaf9",
+        "type": "function",
+        "z": "real-time-dashboard",
+        "name": "Process Alert Data",
+        "func": "try {\n    let payload = msg.payload;\n    \n    if (payload.data) {\n        payload = payload.data;\n    }\n    \n    let events = [];\n    \n    if (Array.isArray(payload)) {\n        events = payload;\n    } else if (typeof payload === 'object') {\n        events = [payload];\n    }\n    \n    const transformedEvents = events.map((event, index) => {\n        const getValue = (key, altKey) => {\n            return event[key] || event[altKey] || 'N/A';\n        };\n        \n        return {\n            id: getValue('En No', 'en_no') || `EVT-${index}`,\n            description: getValue('Event Desc', 'event_desc'),\n            site: getValue('Site Name', 'site_name'),\n            state: getValue('State Cd', 'state_cd'),\n            category: getValue('Event Category', 'event_category'),\n            severity: extractSeverity(getValue('Event Text', 'event_text')),\n            eventDate: getValue('Event Date', 'event_date')\n        };\n    });\n    \n    function extractSeverity(eventText) {\n        if (!eventText) return 'Low';\n        const text = eventText.toLowerCase();\n        if (text.includes('medical event')) return 'High';\n        if (text.includes('equipment failure')) return 'Medium';\n        return 'Low';\n    }\n    \n    // Sort by severity (High first)\n    transformedEvents.sort((a, b) => {\n        const severityOrder = { 'High': 1, 'Medium': 2, 'Low': 3 };\n        return severityOrder[a.severity] - severityOrder[b.severity];\n    });\n    \n    const alertMsg = {\n        payload: {\n            events: transformedEvents,\n            criticalCount: transformedEvents.filter(e => e.severity === 'High').length,\n            totalCount: transformedEvents.length,\n            lastUpdate: new Date().toLocaleString()\n        }\n    };\n    \n    const statusMsg = {\n        payload: `🚨 ALERTS: ${transformedEvents.filter(e => e.severity === 'High').length} critical events`\n    };\n    \n    return [alertMsg, statusMsg];\n    \n} catch (error) {\n    const errorMsg = { payload: `❌ ERROR: ${error.message}` };\n    return [null, errorMsg];\n}",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 580,
+        "wires": [
+            [
+                "2eec5da5c41e3720",
+                "1249aafd581c9037"
+            ],
+            [
+                "2f49539fbc126b6c"
+            ]
+        ]
+    },
+    {
+        "id": "2eec5da5c41e3720",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "alert-group",
+        "name": "Critical Alerts",
+        "order": 1,
+        "width": 6,
+        "height": 6,
+        "format": "<div style=\"padding: 20px; background: #1e1e1e; color: white; border-radius: 10px; height: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.3);\">\n    <h3 style=\"color: #ff6b6b; margin-bottom: 20px; border-bottom: 2px solid #ff6b6b; padding-bottom: 10px;\">\n        🔴 CRITICAL ALERTS ({{msg.payload.criticalCount}})\n    </h3>\n    <div style=\"max-height: 400px; overflow-y: auto;\">\n        <div ng-repeat=\"event in msg.payload.events | filter: {severity: 'High'}\" \n             style=\"background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); \n                    margin: 12px 0; padding: 15px; border-radius: 8px; \n                    border-left: 5px solid #ffeb3b; box-shadow: 0 2px 4px rgba(0,0,0,0.2);\">\n            <div style=\"display: flex; justify-content: between; align-items: start;\">\n                <div style=\"flex: 1;\">\n                    <strong style=\"font-size: 16px; color: white;\">{{event.id}}</strong>\n                    <div style=\"font-size: 14px; margin-top: 5px; color: #f8f9fa;\">{{event.description}}</div>\n                </div>\n                <span style=\"background: #ffeb3b; color: #333; padding: 4px 10px; border-radius: 15px; \n                      font-size: 11px; font-weight: bold;\">\n                    URGENT\n                </span>\n            </div>\n            <div style=\"font-size: 12px; color: #f8f9fa; margin-top: 8px;\">\n                🏥 {{event.site}} | 📍 {{event.state}} | 🕒 {{event.eventDate}}\n            </div>\n        </div>\n        <div ng-if=\"!(msg.payload.events | filter: {severity: 'High'}).length\" \n             style=\"text-align: center; color: #ccc; padding: 40px;\">\n            <div style=\"font-size: 48px; margin-bottom: 10px;\">✅</div>\n            No critical alerts\n        </div>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 630,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "1249aafd581c9037",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "alert-group",
+        "name": "All Alerts",
+        "order": 2,
+        "width": 6,
+        "height": 6,
+        "format": "<div style=\"padding: 20px; background: white; border-radius: 10px; height: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #f8f9fa; padding-bottom: 10px;\">\n        📋 ALL EVENTS ({{msg.payload.totalCount}})\n    </h3>\n    <div style=\"max-height: 400px; overflow-y: auto;\">\n        <div ng-repeat=\"event in msg.payload.events\" \n             style=\"background: {{event.severity === 'High' ? '#ffebee' : event.severity === 'Medium' ? '#fff3e0' : '#f8f9fa'}}; \n                    margin: 8px 0; padding: 12px; border-radius: 6px; \n                    border-left: 4px solid {{event.severity === 'High' ? '#dc3545' : event.severity === 'Medium' ? '#ffc107' : '#28a745'}};\">\n            <div style=\"display: flex; justify-content: between; align-items: center;\">\n                <strong style=\"color: #2c3e50;\">{{event.id}}</strong>\n                <span style=\"background: {{event.severity === 'High' ? '#dc3545' : event.severity === 'Medium' ? '#ffc107' : '#28a745'}}; \n                      color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold;\">\n                    {{event.severity}}\n                </span>\n            </div>\n            <div style=\"font-size: 12px; color: #6c757d; margin-top: 4px;\">{{event.description}}</div>\n            <div style=\"font-size: 11px; color: #6c757d; margin-top: 4px;\">\n                {{event.site}} | {{event.state}} | {{event.category}}\n            </div>\n        </div>\n        <div ng-if=\"!msg.payload.events || msg.payload.events.length === 0\" \n             style=\"text-align: center; color: #6c757d; padding: 40px;\">\n            No events to display\n        </div>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 620,
+        "y": 660,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "2f49539fbc126b6c",
+        "type": "ui_text",
+        "z": "real-time-dashboard",
+        "group": "alert-group",
+        "order": 0,
+        "width": 12,
+        "height": 1,
+        "name": "Status",
+        "label": "Status:",
+        "format": "{{msg.payload}}",
+        "layout": "row-center",
+        "x": 610,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "cc2fb51a80815d72",
+        "type": "inject",
+        "z": "real-time-dashboard",
+        "name": "Test Alert",
+        "props": [
+            {
+                "p": "payload",
+                "v": "{\"metadata\":{\"source\":\"knime_etl_workflow\",\"received_at\":\"2025-10-16T18:23:40.285686\",\"batch_id\":\"20251016_182340\",\"version\":\"1.0\",\"validation\":{\"is_valid\":true,\"errors\":[],\"record_count\":3,\"data_type\":\"list\"}},\"data\":[{\"Event Desc\":\"Agreement State\",\"En No\":57747,\"Site Name\":\"SC Dept of Health & Env Control\",\"Licensee Name\":\"Medical University Hospital\",\"Region No\":1,\"City Name\":\"Charleston\",\"State Cd\":\"SC\",\"County Name\":\"Oconee\",\"License No\":\"081\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Adam Gause\",\"Ops Officer\":\"Brian P. Smith\",\"Notification Date\":\"2025-06-06T12:14\",\"Event Date\":\"2025-06-05T00:00\",\"Time Zone\":\"UTC-4\",\"Last Updated Date\":\"2025-09-18T14:20\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"26.719\",\"Cfr Descr1\":\"Agreement State\",\"Staff Name1\":\"Henrion, Mark\",\"Org Abbrev1\":\"R1DO\",\"Staff Name2\":\"NMSS_EVENTS_NOTIFICATION\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/19/2025  EN Revision Text: AGREEMENT STATE REPORT - MEDICAL EVENT\",\"Event Category\":\"MEDICAL EVENT\"},{\"Event Desc\":\"Agreement State\",\"En No\":57818,\"Site Name\":\"Illinois Emergency Mgmt. Agency\",\"Licensee Name\":\"Isomedix Operations, Inc.\",\"Region No\":3,\"City Name\":\"Libertyville\",\"State Cd\":\"IL\",\"County Name\":\"Oconee\",\"License No\":\"IL-01123-02\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Robin G. Muzzalupo\",\"Ops Officer\":\"Josue Ramirez\",\"Notification Date\":\"2025-07-17T16:20\",\"Event Date\":\"2025-07-16T00:00\",\"Time Zone\":\"UTC-5\",\"Last Updated Date\":\"2025-09-12T12:47\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"26.719\",\"Cfr Descr1\":\"Agreement State\",\"Staff Name1\":\"Nguyen, April\",\"Org Abbrev1\":\"R3DO\",\"Staff Name2\":\"NMSS_EVENTS_NOTIFICATION\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/15/2025  EN Revision Text: AGREEMENT STATE REPORT - EQUIPMENT FAILURE\",\"Event Category\":\"EQUIPMENT FAILURE\"},{\"Event Desc\":\"Part 21\",\"En No\":57827,\"Site Name\":\"Curtiss Wright Flow Control Co.\",\"Licensee Name\":\"Duke Energy Nuclear Llc\",\"Region No\":3,\"City Name\":\"Cincinnati\",\"State Cd\":\"OH\",\"County Name\":\"Oconee\",\"License No\":\"IL-02062-01\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Margie Hover\",\"Ops Officer\":\"Kerby Scales\",\"Notification Date\":\"2025-07-25T09:47\",\"Event Date\":\"2025-05-21T00:00\",\"Time Zone\":\"UTC-4\",\"Last Updated Date\":\"2025-09-23T10:33\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"21.21(a)(2)\",\"Cfr Descr1\":\"Interim Eval Of Deviation\",\"Staff Name1\":\"Zurawski, Paul\",\"Org Abbrev1\":\"R3DO\",\"Staff Name2\":\"Part 21/50.55 Reactors, -\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/24/2025  EN Revision Text: PART 21 INTERIM REPORT OF DEVIATION\",\"Event Category\":\"DEVIATION\"}]}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 140,
+        "y": 580,
+        "wires": [
+            [
+                "447f24795f9aeaf9"
+            ]
+        ]
+    },
+    {
+        "id": "92a882e26cb55f7f",
+        "type": "function",
+        "z": "real-time-dashboard",
+        "name": "Process Category Data",
+        "func": "try {\n    let payload = msg.payload;\n    \n    if (payload.data) {\n        payload = payload.data;\n    }\n    \n    let events = [];\n    \n    if (Array.isArray(payload)) {\n        events = payload;\n    } else if (typeof payload === 'object') {\n        events = [payload];\n    }\n    \n    const transformedEvents = events.map((event, index) => {\n        const getValue = (key, altKey) => {\n            return event[key] || event[altKey] || 'N/A';\n        };\n        \n        return {\n            id: getValue('En No', 'en_no') || `EVT-${index}`,\n            description: getValue('Event Desc', 'event_desc'),\n            site: getValue('Site Name', 'site_name'),\n            state: getValue('State Cd', 'state_cd'),\n            category: getValue('Event Category', 'event_category') || 'OTHER',\n            severity: extractSeverity(getValue('Event Text', 'event_text'))\n        };\n    });\n    \n    function extractSeverity(eventText) {\n        if (!eventText) return 'Low';\n        const text = eventText.toLowerCase();\n        if (text.includes('medical event')) return 'High';\n        if (text.includes('equipment failure')) return 'Medium';\n        return 'Low';\n    }\n    \n    // Group by category\n    const categoryGroups = {};\n    transformedEvents.forEach(event => {\n        if (!categoryGroups[event.category]) {\n            categoryGroups[event.category] = [];\n        }\n        categoryGroups[event.category].push(event);\n    });\n    \n    const categoryMsg = {\n        payload: {\n            events: transformedEvents,\n            categories: categoryGroups,\n            totalCount: transformedEvents.length,\n            lastUpdate: new Date().toLocaleString()\n        }\n    };\n    \n    const statusMsg = {\n        payload: `📂 CATEGORIES: ${Object.keys(categoryGroups).length} categories, ${transformedEvents.length} total events`\n    };\n    \n    return [categoryMsg, statusMsg];\n    \n} catch (error) {\n    const errorMsg = { payload: `❌ ERROR: ${error.message}` };\n    return [null, errorMsg];\n}",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 740,
+        "wires": [
+            [
+                "987638bf184c8a1a",
+                "1d9d800f463d9db0"
+            ],
+            [
+                "71605d934c81aa0f"
+            ]
+        ]
+    },
+    {
+        "id": "987638bf184c8a1a",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "category-group",
+        "name": "Category Overview",
+        "order": 1,
+        "width": 6,
+        "height": 6,
+        "format": "<div style=\"padding: 20px; background: white; border-radius: 10px; height: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #f8f9fa; padding-bottom: 10px;\">\n        📂 Event Categories\n    </h3>\n    <div style=\"display: grid; grid-template-columns: 1fr; gap: 12px; max-height: 400px; overflow-y: auto;\">\n        <div ng-repeat=\"(category, eventsInCategory) in msg.payload.categories\" \n             style=\"background: linear-gradient(135deg, {{getCategoryColor(category)}}); \n                    color: white; padding: 15px; border-radius: 8px; \n                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n            <div style=\"display: flex; justify-content: between; align-items: center;\">\n                <div style=\"flex: 1;\">\n                    <strong style=\"font-size: 16px;\">{{category}}</strong>\n                    <div style=\"font-size: 12px; opacity: 0.9;\">{{eventsInCategory.length}} events</div>\n                </div>\n                <div style=\"font-size: 24px;\">{{getCategoryIcon(category)}}</div>\n            </div>\n            <div style=\"margin-top: 10px; font-size: 11px; opacity: 0.8;\">\n                High: {{eventsInCategory.filter(e => e.severity === 'High').length}} | \n                Medium: {{eventsInCategory.filter(e => e.severity === 'Medium').length}} | \n                Low: {{eventsInCategory.filter(e => e.severity === 'Low').length}}\n            </div>\n        </div>\n        <div ng-if=\"!msg.payload.categories || Object.keys(msg.payload.categories).length === 0\" \n             style=\"text-align: center; color: #6c757d; padding: 40px;\">\n            No categories to display\n        </div>\n    </div>\n</div>\n\n<script>\n    $scope.getCategoryColor = function(category) {\n        const colors = {\n            'MEDICAL EVENT': '#e74c3c, #c0392b',\n            'EQUIPMENT FAILURE': '#e67e22, #d35400',\n            'DAMAGED': '#f39c12, #e67e22',\n            'STUCK OPEN': '#3498db, #2980b9',\n            'LOST': '#9b59b6, #8e44ad',\n            'DEVIATION': '#34495e, #2c3e50'\n        };\n        return colors[category] || '#95a5a6, #7f8c8d';\n    };\n    \n    $scope.getCategoryIcon = function(category) {\n        const icons = {\n            'MEDICAL EVENT': '🏥',\n            'EQUIPMENT FAILURE': '🔧',\n            'DAMAGED': '⚡',\n            'STUCK OPEN': '📏',\n            'LOST': '🔍',\n            'DEVIATION': '📊'\n        };\n        return icons[category] || '📄';\n    };\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 650,
+        "y": 780,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "1d9d800f463d9db0",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "category-group",
+        "name": "Category Details",
+        "order": 2,
+        "width": 6,
+        "height": 6,
+        "format": "<div style=\"padding: 20px; background: #f8f9fa; border-radius: 10px; height: 100%;\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #dee2e6; padding-bottom: 10px;\">\n        🔍 Event Details by Category\n    </h3>\n    <div style=\"max-height: 400px; overflow-y: auto;\">\n        <div ng-repeat=\"(category, eventsInCategory) in msg.payload.categories\">\n            <div style=\"background: white; margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff;\">\n                <h4 style=\"margin: 0 0 10px 0; color: #2c3e50;\">{{category}} ({{eventsInCategory.length}})</h4>\n                <div ng-repeat=\"event in eventsInCategory\" \n                     style=\"background: {{event.severity === 'High' ? '#ffebee' : event.severity === 'Medium' ? '#fff3e0' : '#f8f9fa'}}; \n                            margin: 6px 0; padding: 8px; border-radius: 4px; font-size: 12px;\">\n                    <div style=\"display: flex; justify-content: between; align-items: center;\">\n                        <strong>{{event.id}}</strong>\n                        <span style=\"background: {{event.severity === 'High' ? '#dc3545' : event.severity === 'Medium' ? '#ffc107' : '#28a745'}}; \n                              color: white; padding: 1px 6px; border-radius: 10px; font-size: 9px;\">\n                            {{event.severity}}\n                        </span>\n                    </div>\n                    <div style=\"color: #6c757d; margin-top: 2px;\">{{event.description}}</div>\n                    <div style=\"color: #6c757d; font-size: 10px;\">{{event.site}}, {{event.state}}</div>\n                </div>\n            </div>\n        </div>\n        <div ng-if=\"!msg.payload.categories || Object.keys(msg.payload.categories).length === 0\" \n             style=\"text-align: center; color: #6c757d; padding: 40px;\">\n            No events to display\n        </div>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "x": 650,
+        "y": 820,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "71605d934c81aa0f",
+        "type": "ui_text",
+        "z": "real-time-dashboard",
+        "group": "category-group",
+        "order": 0,
+        "width": 12,
+        "height": 1,
+        "name": "Status",
+        "label": "Status:",
+        "format": "{{msg.payload}}",
+        "layout": "row-center",
+        "x": 610,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "775112bb4394dbfa",
+        "type": "inject",
+        "z": "real-time-dashboard",
+        "name": "Test Category",
+        "props": [
+            {
+                "p": "payload",
+                "v": "{\"metadata\":{\"source\":\"knime_etl_workflow\",\"received_at\":\"2025-10-16T18:23:40.285686\",\"batch_id\":\"20251016_182340\",\"version\":\"1.0\",\"validation\":{\"is_valid\":true,\"errors\":[],\"record_count\":3,\"data_type\":\"list\"}},\"data\":[{\"Event Desc\":\"Agreement State\",\"En No\":57747,\"Site Name\":\"SC Dept of Health & Env Control\",\"Licensee Name\":\"Medical University Hospital\",\"Region No\":1,\"City Name\":\"Charleston\",\"State Cd\":\"SC\",\"County Name\":\"Oconee\",\"License No\":\"081\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Adam Gause\",\"Ops Officer\":\"Brian P. Smith\",\"Notification Date\":\"2025-06-06T12:14\",\"Event Date\":\"2025-06-05T00:00\",\"Time Zone\":\"UTC-4\",\"Last Updated Date\":\"2025-09-18T14:20\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"26.719\",\"Cfr Descr1\":\"Agreement State\",\"Staff Name1\":\"Henrion, Mark\",\"Org Abbrev1\":\"R1DO\",\"Staff Name2\":\"NMSS_EVENTS_NOTIFICATION\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/19/2025  EN Revision Text: AGREEMENT STATE REPORT - MEDICAL EVENT\",\"Event Category\":\"MEDICAL EVENT\"},{\"Event Desc\":\"Agreement State\",\"En No\":57818,\"Site Name\":\"Illinois Emergency Mgmt. Agency\",\"Licensee Name\":\"Isomedix Operations, Inc.\",\"Region No\":3,\"City Name\":\"Libertyville\",\"State Cd\":\"IL\",\"County Name\":\"Oconee\",\"License No\":\"IL-01123-02\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Robin G. Muzzalupo\",\"Ops Officer\":\"Josue Ramirez\",\"Notification Date\":\"2025-07-17T16:20\",\"Event Date\":\"2025-07-16T00:00\",\"Time Zone\":\"UTC-5\",\"Last Updated Date\":\"2025-09-12T12:47\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"26.719\",\"Cfr Descr1\":\"Agreement State\",\"Staff Name1\":\"Nguyen, April\",\"Org Abbrev1\":\"R3DO\",\"Staff Name2\":\"NMSS_EVENTS_NOTIFICATION\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/15/2025  EN Revision Text: AGREEMENT STATE REPORT - EQUIPMENT FAILURE\",\"Event Category\":\"EQUIPMENT FAILURE\"},{\"Event Desc\":\"Part 21\",\"En No\":57827,\"Site Name\":\"Curtiss Wright Flow Control Co.\",\"Licensee Name\":\"Duke Energy Nuclear Llc\",\"Region No\":3,\"City Name\":\"Cincinnati\",\"State Cd\":\"OH\",\"County Name\":\"Oconee\",\"License No\":\"IL-02062-01\",\"Agreement State Ind\":\"Y\",\"Docket No\":\"05000269\",\"Reactor Type\":\"[1] W-4-LP,[2] W-4-LP\",\"Nrc Notified By\":\"Margie Hover\",\"Ops Officer\":\"Kerby Scales\",\"Notification Date\":\"2025-07-25T09:47\",\"Event Date\":\"2025-05-21T00:00\",\"Time Zone\":\"UTC-4\",\"Last Updated Date\":\"2025-09-23T10:33\",\"Emergency Class\":\"Non Emergency\",\"Cfr Cd1\":\"21.21(a)(2)\",\"Cfr Descr1\":\"Interim Eval Of Deviation\",\"Staff Name1\":\"Zurawski, Paul\",\"Org Abbrev1\":\"R3DO\",\"Staff Name2\":\"Part 21/50.55 Reactors, -\",\"Org Abbrev2\":\"EMAIL\",\"Scram Code 1\":\"N\",\"RX CRIT 1\":\"N\",\"Initial PWR 1\":0,\"Initial RX Mode1\":\"Power Operation\",\"Current PWR 1\":0,\"Current RX Mode 1\":\"Power Operation\",\"Scram Code 2\":\"N\",\"RX CRIT 2\":\"N\",\"Initial PWR 2\":0,\"Initial RX Mode 2\":\"Power Operation\",\"Current PWR 2\":0,\"Current RX Mode 2\":\"Power Operation\",\"Scram Code 3\":\"N\",\"RX CRIT 3\":\"N\",\"Initial PWR 3\":0,\"Initial RX Mode 3\":\"Power Operation\",\"Current PWR 3\":0,\"Current RX Mode 3\":\"Power Operation\",\"Event Text\":\"EN Revision Imported Date: 9/24/2025  EN Revision Text: PART 21 INTERIM REPORT OF DEVIATION\",\"Event Category\":\"DEVIATION\"}]}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 130,
+        "y": 740,
+        "wires": [
+            [
+                "92a882e26cb55f7f"
+            ]
+        ]
+    },
+    {
+        "id": "process-geographic",
+        "type": "function",
+        "z": "real-time-dashboard",
+        "name": "Process for Geographic",
+        "func": "try {\n    let payload = msg.payload;\n    \n    if (payload.data) {\n        payload = payload.data;\n    }\n    \n    let events = [];\n    \n    if (Array.isArray(payload)) {\n        events = payload;\n    } else if (typeof payload === 'object') {\n        events = [payload];\n    }\n    \n    // Transform events with geographic focus\n    const transformedEvents = events.map((event, index) => {\n        const getValue = (key, altKey) => {\n            return event[key] || event[altKey] || 'N/A';\n        };\n        \n        return {\n            id: getValue('En No', 'en_no') || `EVT-${index}`,\n            description: getValue('Event Desc', 'event_desc'),\n            site: getValue('Site Name', 'site_name'),\n            city: getValue('City Name', 'city_name'),\n            state: getValue('State Cd', 'state_cd'),\n            region: getValue('Region No', 'region_no'),\n            category: getValue('Event Category', 'event_category'),\n            severity: getValue('Event Text', 'event_text')?.toLowerCase().includes('medical event') ? 'High' : 'Medium',\n            eventDate: getValue('Event Date', 'event_date'),\n            coordinates: getCoordinates(getValue('State Cd', 'state_cd'), getValue('City Name', 'city_name'))\n        };\n    });\n    \n    function getCoordinates(state, city) {\n        // Mock coordinates for demonstration - in real app, use geocoding API\n        const stateCoords = {\n            'SC': { lat: 33.8361, lng: -81.1637 },\n            'IL': { lat: 40.6331, lng: -89.3985 },\n            'OH': { lat: 40.4172, lng: -82.9071 },\n            'WA': { lat: 47.7511, lng: -120.7401 },\n            'TX': { lat: 31.9686, lng: -99.9018 },\n            'LA': { lat: 30.9843, lng: -91.9623 },\n            'NM': { lat: 34.5199, lng: -105.8701 },\n            'KY': { lat: 37.6681, lng: -84.6701 },\n            'AZ': { lat: 34.0489, lng: -111.0937 },\n            'NY': { lat: 43.2994, lng: -74.2179 }\n        };\n        \n        return stateCoords[state] || { lat: 39.8283, lng: -98.5795 }; // Default to US center\n    }\n    \n    // Calculate geographic distribution\n    const stateDistribution = {};\n    const regionDistribution = {};\n    const heatmapData = [];\n    \n    transformedEvents.forEach(event => {\n        stateDistribution[event.state] = (stateDistribution[event.state] || 0) + 1;\n        regionDistribution[event.region] = (regionDistribution[event.region] || 0) + 1;\n        \n        if (event.coordinates) {\n            heatmapData.push({\n                state: event.state,\n                city: event.city,\n                count: 1,\n                lat: event.coordinates.lat + (Math.random() * 2 - 1), // Add some variance\n                lng: event.coordinates.lng + (Math.random() * 2 - 1),\n                severity: event.severity\n            });\n        }\n    });\n    \n    const geographicMsg = {\n        payload: {\n            events: transformedEvents,\n            stateDistribution: stateDistribution,\n            regionDistribution: regionDistribution,\n            heatmapData: heatmapData,\n            totalEvents: transformedEvents.length,\n            lastUpdate: new Date().toLocaleString()\n        }\n    };\n    \n    const statusMsg = {\n        payload: `🗺️ GEOGRAPHIC: ${transformedEvents.length} events across ${Object.keys(stateDistribution).length} states`\n    };\n    \n    // Create chart data\n    const stateChartData = {\n        series: [\"Events\"],\n        data: Object.values(stateDistribution).map(count => [count]),\n        labels: Object.keys(stateDistribution)\n    };\n    \n    const regionChartData = {\n        series: [\"Events\"],\n        data: Object.values(regionDistribution).map(count => [count]),\n        labels: Object.keys(regionDistribution).map(region => `Region ${region}`)\n    };\n    \n    node.status({fill:\"blue\", shape:\"dot\", text: `Geographic data processed`});\n    \n    return [geographicMsg, statusMsg, {payload: stateChartData}, {payload: regionChartData}];\n    \n} catch (error) {\n    node.status({fill:\"red\", shape:\"ring\", text: \"Geographic processing error\"});\n    const errorMsg = { payload: `❌ GEOGRAPHIC ERROR: ${error.message}` };\n    return [null, errorMsg, null, null];\n}",
+        "outputs": 4,
+        "x": 370,
+        "y": 920,
+        "wires": [
+            [
+                "us-map",
+                "state-table",
+                "region-breakdown"
+            ],
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "us-map",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "031c5936dd77b435",
+        "name": "US Events Map",
+        "order": 1,
+        "width": "0",
+        "height": "0",
+        "format": "<div style=\"padding: 15px; background: white; border-radius: 10px; height: 100%;\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 15px;\">🗺️ US Nuclear Events Map</h3>\n    \n    <div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;\">\n        <strong>Total Events: {{msg.payload.totalEvents}}</strong> | \n        States Affected: {{getStateCount()}} | \n        Last Updated: {{msg.payload.lastUpdate}}\n    </div>\n    \n    <div style=\"background: #e8f4fd; border: 2px solid #b3d9ff; border-radius: 8px; padding: 20px; text-align: center; height: 300px; display: flex; align-items: center; justify-content: center;\">\n        <div style=\"color: #0066cc; font-size: 16px;\">\n            <div style=\"font-size: 48px; margin-bottom: 10px;\">🗺️</div>\n            <strong>Geographic Heat Map</strong>\n            <div style=\"margin-top: 10px; font-size: 14px; color: #666;\">\n                Events concentrated in:\n                <div style=\"margin-top: 5px; font-weight: bold;\">\n                    {{getTopStates()}}\n                </div>\n            </div>\n            <div style=\"margin-top: 15px; font-size: 12px; color: #999;\">\n                (In a real implementation, this would show an interactive map with event clusters)\n            </div>\n        </div>\n    </div>\n    \n    <div style=\"margin-top: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px;\">\n        <div ng-repeat=\"(state, count) in msg.payload.stateDistribution\" \n             style=\"background: {{getStateColor(count)}}; color: white; padding: 8px; border-radius: 5px; text-align: center; font-size: 12px;\">\n            <strong>{{state}}</strong><br>\n            {{count}} events\n        </div>\n    </div>\n</div>\n\n<script>\n    (function(scope) {\n        scope.getStateCount = function() {\n            return Object.keys(scope.msg.payload.stateDistribution).length;\n        };\n        \n        scope.getTopStates = function() {\n            const states = Object.entries(scope.msg.payload.stateDistribution)\n                .sort((a, b) => b[1] - a[1])\n                .slice(0, 3)\n                .map(([state, count]) => `${state} (${count})`)\n                .join(', ');\n            return states || 'No data';\n        };\n        \n        scope.getStateColor = function(count) {\n            if (count >= 10) return '#dc3545';\n            if (count >= 5) return '#fd7e14';\n            if (count >= 2) return '#ffc107';\n            return '#28a745';\n        };\n    })(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 640,
+        "y": 900,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "state-table",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "031c5936dd77b435",
+        "name": "State Breakdown",
+        "order": 2,
+        "width": 4,
+        "height": 6,
+        "format": "<div style=\"padding: 15px; background: white; border-radius: 10px; height: 100%;\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 15px;\">📊 Events by State</h3>\n    \n    <div style=\"max-height: 400px; overflow-y: auto;\">\n        <table style=\"width: 100%; border-collapse: collapse; font-size: 12px;\">\n            <thead style=\"background: #f8f9fa; position: sticky; top: 0;\">\n                <tr>\n                    <th style=\"padding: 8px; text-align: left; border-bottom: 1px solid #dee2e6;\">State</th>\n                    <th style=\"padding: 8px; text-align: right; border-bottom: 1px solid #dee2e6;\">Events</th>\n                    <th style=\"padding: 8px; text-align: center; border-bottom: 1px solid #dee2e6;\">Percentage</th>\n                </tr>\n            </thead>\n            <tbody>\n                <tr ng-repeat=\"(state, count) in getSortedStates()\" \n                    style=\"border-bottom: 1px solid #f8f9fa;\">\n                    <td style=\"padding: 8px;\">\n                        <strong>{{state}}</strong>\n                    </td>\n                    <td style=\"padding: 8px; text-align: right;\">\n                        {{count}}\n                    </td>\n                    <td style=\"padding: 8px; text-align: center;\">\n                        <span style=\"background: #e9ecef; padding: 2px 6px; border-radius: 10px; font-size: 11px;\">\n                            {{((count / msg.payload.totalEvents) * 100).toFixed(1)}}%\n                        </span>\n                    </td>\n                </tr>\n            </tbody>\n        </table>\n    </div>\n</div>\n\n<script>\n    (function(scope) {\n        scope.getSortedStates = function() {\n            return Object.entries(scope.msg.payload.stateDistribution)\n                .sort((a, b) => b[1] - a[1])\n                .reduce((obj, [key, value]) => {\n                    obj[key] = value;\n                    return obj;\n                }, {});\n        };\n    })(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 650,
+        "y": 940,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "region-breakdown",
+        "type": "ui_chart",
+        "z": "real-time-dashboard",
+        "name": "Events by Region",
+        "group": "031c5936dd77b435",
+        "order": 3,
+        "width": 6,
+        "height": 4,
+        "label": "Regional Distribution",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "No data",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 50,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#feca57",
+            "#ff9ff3",
+            "#54a0ff",
+            "#5f27cd",
+            "#000000"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 650,
+        "y": 980,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "timeline-summary",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "031c5936dd77b435",
+        "name": "Timeline Summary",
+        "order": 1,
+        "width": 6,
+        "height": 4,
+        "format": "<div style=\"padding: 15px; background: white; border-radius: 10px; height: 100%;\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 15px;\">📈 Timeline Analysis</h3>\n    \n    <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 10px;\">\n        <div style=\"background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; border-radius: 8px; text-align: center;\">\n            <div style=\"font-size: 24px; font-weight: bold;\">{{getBusiestMonth().count || 0}}</div>\n            <div style=\"font-size: 12px;\">Peak Month<br>{{getBusiestMonth().month || 'N/A'}}</div>\n        </div>\n        \n        <div style=\"background: linear-gradient(135deg, #f093fb, #f5576c); color: white; padding: 15px; border-radius: 8px; text-align: center;\">\n            <div style=\"font-size: 24px; font-weight: bold;\">{{getBusiestDay().count || 0}}</div>\n            <div style=\"font-size: 12px;\">Peak Day<br>{{getBusiestDay().day || 'N/A'}}</div>\n        </div>\n        \n        <div style=\"background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; padding: 15px; border-radius: 8px; text-align: center;\">\n            <div style=\"font-size: 24px; font-weight: bold;\">{{getPeakHour().count || 0}}</div>\n            <div style=\"font-size: 12px;\">Peak Hour<br>{{getPeakHour().hour || 'N/A'}}</div>\n        </div>\n        \n        <div style=\"background: linear-gradient(135deg, #43e97b, #38f9d7); color: white; padding: 15px; border-radius: 8px; text-align: center;\">\n            <div style=\"font-size: 24px; font-weight: bold;\">{{(msg.payload.avgResponseTime || 0).toFixed(1)}}</div>\n            <div style=\"font-size: 12px;\">Avg Response<br>Days</div>\n        </div>\n    </div>\n</div>\n\n<script>\n    (function(scope) {\n        scope.getBusiestMonth = function() {\n            const months = scope.msg.payload.monthlyDistribution || {};\n            const entries = Object.entries(months);\n            if (entries.length === 0) return { month: 'N/A', count: 0 };\n            \n            const busiest = entries.reduce((max, [month, count]) => \n                count > max.count ? { month, count } : max, \n                { month: '', count: 0 }\n            );\n            return busiest;\n        };\n        \n        scope.getBusiestDay = function() {\n            const days = scope.msg.payload.dailyDistribution || {};\n            const entries = Object.entries(days);\n            if (entries.length === 0) return { day: 'N/A', count: 0 };\n            \n            const busiest = entries.reduce((max, [day, count]) => \n                count > max.count ? { day, count } : max, \n                { day: '', count: 0 }\n            );\n            return busiest;\n        };\n        \n        scope.getPeakHour = function() {\n            const hours = scope.msg.payload.hourlyDistribution || [];\n            if (hours.length === 0) return { hour: 'N/A', count: 0 };\n            \n            const maxCount = Math.max(...hours);\n            const peakHour = hours.indexOf(maxCount);\n            return { hour: `${peakHour}:00`, count: maxCount };\n        };\n    })(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 650,
+        "y": 1060,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "process-timeline",
+        "type": "function",
+        "z": "real-time-dashboard",
+        "name": "Process for Timeline",
+        "func": "try {\n    let payload = msg.payload;\n    \n    if (payload.data) {\n        payload = payload.data;\n    }\n    \n    let events = [];\n    \n    if (Array.isArray(payload)) {\n        events = payload;\n    } else if (typeof payload === 'object') {\n        events = [payload];\n    }\n    \n    // Transform events with timeline focus\n    const transformedEvents = events.map((event, index) => {\n        const getValue = (key, altKey) => {\n            return event[key] || event[altKey] || 'N/A';\n        };\n        \n        const eventDate = getValue('Event Date', 'event_date');\n        const notificationDate = getValue('Notification Date', 'notification_date');\n        \n        return {\n            id: getValue('En No', 'en_no') || `EVT-${index}`,\n            description: getValue('Event Desc', 'event_desc'),\n            category: getValue('Event Category', 'event_category'),\n            severity: getValue('Event Text', 'event_text')?.toLowerCase().includes('medical event') ? 'High' : 'Medium',\n            eventDate: eventDate,\n            notificationDate: notificationDate,\n            responseTime: calculateResponseTime(eventDate, notificationDate),\n            month: extractMonth(eventDate),\n            dayOfWeek: extractDayOfWeek(eventDate),\n            hour: extractHour(eventDate)\n        };\n    });\n    \n    function calculateResponseTime(eventDate, notificationDate) {\n        if (!eventDate || !notificationDate || eventDate === 'N/A' || notificationDate === 'N/A') return null;\n        \n        try {\n            const event = new Date(eventDate);\n            const notification = new Date(notificationDate);\n            return Math.abs(notification - event) / (1000 * 60 * 60 * 24); // days\n        } catch {\n            return null;\n        }\n    }\n    \n    function extractMonth(dateString) {\n        if (!dateString || dateString === 'N/A') return 'Unknown';\n        try {\n            const date = new Date(dateString);\n            return date.toLocaleString('default', { month: 'long' });\n        } catch {\n            return 'Unknown';\n        }\n    }\n    \n    function extractDayOfWeek(dateString) {\n        if (!dateString || dateString === 'N/A') return 'Unknown';\n        try {\n            const date = new Date(dateString);\n            return date.toLocaleString('default', { weekday: 'long' });\n        } catch {\n            return 'Unknown';\n        }\n    }\n    \n    function extractHour(dateString) {\n        if (!dateString || dateString === 'N/A') return -1;\n        try {\n            const date = new Date(dateString);\n            return date.getHours();\n        } catch {\n            return -1;\n        }\n    }\n    \n    // Calculate timeline statistics\n    const monthlyDistribution = {};\n    const dailyDistribution = {};\n    const hourlyDistribution = Array(24).fill(0);\n    const responseTimes = [];\n    \n    transformedEvents.forEach(event => {\n        // Monthly distribution\n        monthlyDistribution[event.month] = (monthlyDistribution[event.month] || 0) + 1;\n        \n        // Daily distribution\n        dailyDistribution[event.dayOfWeek] = (dailyDistribution[event.dayOfWeek] || 0) + 1;\n        \n        // Hourly distribution\n        if (event.hour >= 0 && event.hour < 24) {\n            hourlyDistribution[event.hour]++;\n        }\n        \n        // Response times\n        if (event.responseTime !== null) {\n            responseTimes.push(event.responseTime);\n        }\n    });\n    \n    // Sort months chronologically\n    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];\n    const sortedMonthly = {};\n    monthOrder.forEach(month => {\n        if (monthlyDistribution[month]) {\n            sortedMonthly[month] = monthlyDistribution[month];\n        }\n    });\n    \n    // Sort days chronologically\n    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];\n    const sortedDaily = {};\n    dayOrder.forEach(day => {\n        if (dailyDistribution[day]) {\n            sortedDaily[day] = dailyDistribution[day];\n        }\n    });\n    \n    const timelineMsg = {\n        payload: {\n            events: transformedEvents,\n            monthlyDistribution: sortedMonthly,\n            dailyDistribution: sortedDaily,\n            hourlyDistribution: hourlyDistribution,\n            responseTimes: responseTimes,\n            avgResponseTime: responseTimes.length > 0 ? \n                responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length : 0,\n            totalEvents: transformedEvents.length,\n            lastUpdate: new Date().toLocaleString()\n        }\n    };\n    \n    const statusMsg = {\n        payload: `📅 TIMELINE: ${transformedEvents.length} events analyzed over time`\n    };\n    \n    // Create chart data\n    const monthlyChartData = {\n        series: [\"Events\"],\n        data: Object.values(sortedMonthly).map(count => [count]),\n        labels: Object.keys(sortedMonthly)\n    };\n    \n    const dailyChartData = {\n        series: [\"Events\"],\n        data: Object.values(sortedDaily).map(count => [count]),\n        labels: Object.keys(sortedDaily)\n    };\n    \n    const hourlyChartData = {\n        series: [\"Events\"],\n        data: hourlyDistribution.map(count => [count]),\n        labels: Array(24).fill().map((_, i) => `${i}:00`)\n    };\n    \n    const responseTimeData = {\n        series: [\"Days\"],\n        data: responseTimes.map(time => [time]),\n        labels: responseTimes.map((_, i) => `Event ${i+1}`)\n    };\n    \n    node.status({fill:\"purple\", shape:\"dot\", text: `Timeline data processed`});\n    \n    return [timelineMsg, statusMsg, {payload: monthlyChartData}, {payload: dailyChartData}, {payload: hourlyChartData}, {payload: responseTimeData}];\n    \n} catch (error) {\n    node.status({fill:\"red\", shape:\"ring\", text: \"Timeline processing error\"});\n    const errorMsg = { payload: `❌ TIMELINE ERROR: ${error.message}` };\n    return [null, errorMsg, null, null, null, null];\n}",
+        "outputs": 6,
+        "x": 360,
+        "y": 1080,
+        "wires": [
+            [
+                "timeline-summary"
+            ],
+            [],
+            [],
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "process-risk",
+        "type": "function",
+        "z": "real-time-dashboard",
+        "name": "Process for Risk Assessment",
+        "func": "try {\n    let payload = msg.payload;\n    \n    if (payload.data) {\n        payload = payload.data;\n    }\n    \n    let events = [];\n    \n    if (Array.isArray(payload)) {\n        events = payload;\n    } else if (typeof payload === 'object') {\n        events = [payload];\n    }\n    \n    // Transform events with risk assessment focus\n    const transformedEvents = events.map((event, index) => {\n        const getValue = (key, altKey) => {\n            return event[key] || event[altKey] || 'N/A';\n        };\n        \n        const eventText = getValue('Event Text', 'event_text') || '';\n        const category = getValue('Event Category', 'event_category');\n        \n        return {\n            id: getValue('En No', 'en_no') || `EVT-${index}`,\n            description: getValue('Event Desc', 'event_desc'),\n            category: category,\n            site: getValue('Site Name', 'site_name'),\n            state: getValue('State Cd', 'state_cd'),\n            riskScore: calculateRiskScore(category, eventText),\n            impactLevel: calculateImpactLevel(category),\n            probability: calculateProbability(category),\n            severity: getValue('Event Text', 'event_text')?.toLowerCase().includes('medical event') ? 'High' : 'Medium',\n            mitigation: suggestMitigation(category)\n        };\n    });\n    \n    function calculateRiskScore(category, eventText) {\n        let score = 50; // Base score\n        \n        // Category-based scoring\n        if (category === 'MEDICAL EVENT') score += 40;\n        if (category === 'EQUIPMENT FAILURE') score += 30;\n        if (category === 'DAMAGED') score += 25;\n        if (category === 'STUCK OPEN') score += 20;\n        if (category === 'LOST') score += 15;\n        \n        // Text-based scoring\n        const text = eventText.toLowerCase();\n        if (text.includes('medical event')) score += 20;\n        if (text.includes('patient')) score += 15;\n        if (text.includes('exposure')) score += 25;\n        if (text.includes('leak')) score += 20;\n        \n        return Math.min(100, Math.max(0, score));\n    }\n    \n    function calculateImpactLevel(category) {\n        const impactLevels = {\n            'MEDICAL EVENT': 'Critical',\n            'EQUIPMENT FAILURE': 'High',\n            'DAMAGED': 'Medium',\n            'STUCK OPEN': 'Medium',\n            'LOST': 'Low',\n            'DEVIATION': 'Low'\n        };\n        return impactLevels[category] || 'Low';\n    }\n    \n    function calculateProbability(category) {\n        // Mock probability based on category\n        const probabilities = {\n            'MEDICAL EVENT': 'Low',\n            'EQUIPMENT FAILURE': 'Medium',\n            'DAMAGED': 'High',\n            'STUCK OPEN': 'Medium',\n            'LOST': 'High',\n            'DEVIATION': 'Low'\n        };\n        return probabilities[category] || 'Medium';\n    }\n    \n    function suggestMitigation(category) {\n        const mitigations = {\n            'MEDICAL EVENT': 'Enhanced training and double-check procedures',\n            'EQUIPMENT FAILURE': 'Regular maintenance and backup systems',\n            'DAMAGED': 'Improved handling protocols and inspections',\n            'STUCK OPEN': 'Preventive maintenance and quick-response teams',\n            'LOST': 'Better tracking and storage procedures',\n            'DEVIATION': 'Process audits and quality controls'\n        };\n        return mitigations[category] || 'Review procedures and implement controls';\n    }\n    \n    // Calculate risk statistics\n    const riskDistribution = { Low: 0, Medium: 0, High: 0, Critical: 0 };\n    const impactDistribution = { Low: 0, Medium: 0, High: 0, Critical: 0 };\n    const probabilityDistribution = { Low: 0, Medium: 0, High: 0 };\n    const highRiskEvents = [];\n    \n    let totalRiskScore = 0;\n    \n    transformedEvents.forEach(event => {\n        // Risk distribution\n        if (event.riskScore >= 80) riskDistribution.Critical++;\n        else if (event.riskScore >= 60) riskDistribution.High++;\n        else if (event.riskScore >= 40) riskDistribution.Medium++;\n        else riskDistribution.Low++;\n        \n        // Impact distribution\n        impactDistribution[event.impactLevel]++;\n        \n        // Probability distribution\n        probabilityDistribution[event.probability]++;\n        \n        // High risk events\n        if (event.riskScore >= 70) {\n            highRiskEvents.push(event);\n        }\n        \n        totalRiskScore += event.riskScore;\n    });\n    \n    const avgRiskScore = transformedEvents.length > 0 ? totalRiskScore / transformedEvents.length : 0;\n    \n    const riskMsg = {\n        payload: {\n            events: transformedEvents,\n            highRiskEvents: highRiskEvents,\n            riskDistribution: riskDistribution,\n            impactDistribution: impactDistribution,\n            probabilityDistribution: probabilityDistribution,\n            avgRiskScore: avgRiskScore,\n            totalEvents: transformedEvents.length,\n            highRiskCount: highRiskEvents.length,\n            lastUpdate: new Date().toLocaleString()\n        }\n    };\n    \n    const statusMsg = {\n        payload: `⚠️ RISK: ${transformedEvents.length} events, ${highRiskEvents.length} high risk`\n    };\n    \n    // Create chart data\n    const riskChartData = {\n        series: [\"Events\"],\n        data: Object.values(riskDistribution).map(count => [count]),\n        labels: Object.keys(riskDistribution)\n    };\n    \n    const impactChartData = {\n        series: [\"Events\"],\n        data: Object.values(impactDistribution).map(count => [count]),\n        labels: Object.keys(impactDistribution)\n    };\n    \n    const probabilityChartData = {\n        series: [\"Events\"],\n        data: Object.values(probabilityDistribution).map(count => [count]),\n        labels: Object.keys(probabilityDistribution)\n    };\n    \n    node.status({fill:\"orange\", shape:\"dot\", text: `Risk assessment completed`});\n    \n    return [riskMsg, statusMsg, {payload: riskChartData}, {payload: impactChartData}, {payload: probabilityChartData}];\n    \n} catch (error) {\n    node.status({fill:\"red\", shape:\"ring\", text: \"Risk assessment error\"});\n    const errorMsg = { payload: `❌ RISK ERROR: ${error.message}` };\n    return [null, errorMsg, null, null, null];\n}",
+        "outputs": 5,
+        "x": 380,
+        "y": 1220,
+        "wires": [
+            [
+                "risk-matrix"
+            ],
+            [],
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "risk-matrix",
+        "type": "ui_template",
+        "z": "real-time-dashboard",
+        "group": "031c5936dd77b435",
+        "name": "Risk Matrix",
+        "order": 1,
+        "width": 6,
+        "height": 6,
+        "format": "<div style=\"padding: 15px; background: white; border-radius: 10px; height: 100%;\">\n    <h3 style=\"color: #2c3e50; margin-bottom: 15px;\">⚡ Risk Assessment Matrix</h3>\n    \n    <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;\">\n        <div style=\"background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 15px; border-radius: 8px; text-align: center;\">\n            <div style=\"font-size: 24px; font-weight: bold;\">{{msg.payload.avgRiskScore.toFixed(1)}}</div>\n            <div style=\"font-size: 12px;\">Average Risk Score</div>\n        </div>\n        \n        <div style=\"background: linear-gradient(135deg, #dc3545, #fd7e14); color: white; padding: 15px; border-radius: 8px; text-align: center;\">\n            <div style=\"font-size: 24px; font-weight: bold;\">{{msg.payload.highRiskCount}}</div>\n            <div style=\"font-size: 12px;\">High Risk Events</div>\n        </div>\n    </div>\n    \n    <div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px;\">\n        <h4 style=\"margin: 0 0 10px 0; color: #495057;\">Risk Distribution</h4>\n        <div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;\">\n            <div style=\"background: #28a745; color: white; padding: 8px; border-radius: 5px; text-align: center;\">\n                <strong>Low</strong><br>{{msg.payload.riskDistribution.Low || 0}}\n            </div>\n            <div style=\"background: #ffc107; color: black; padding: 8px; border-radius: 5px; text-align: center;\">\n                <strong>Medium</strong><br>{{msg.payload.riskDistribution.Medium || 0}}\n            </div>\n            <div style=\"background: #fd7e14; color: white; padding: 8px; border-radius: 5px; text-align: center;\">\n                <strong>High</strong><br>{{msg.payload.riskDistribution.High || 0}}\n            </div>\n            <div style=\"background: #dc3545; color: white; padding: 8px; border-radius: 5px; text-align: center;\">\n                <strong>Critical</strong><br>{{msg.payload.riskDistribution.Critical || 0}}\n            </div>\n        </div>\n    </div>\n    \n    <div style=\"margin-top: 15px; font-size: 12px; color: #6c757d;\">\n        <strong>Risk Assessment:</strong>\n        <div ng-if=\"msg.payload.avgRiskScore >= 70\" style=\"color: #dc3545;\">\n            🔴 High overall risk - Immediate attention required\n        </div>\n        <div ng-if=\"msg.payload.avgRiskScore >= 50 && msg.payload.avgRiskScore < 70\" style=\"color: #fd7e14;\">\n            🟡 Medium overall risk - Monitor closely\n        </div>\n        <div ng-if=\"msg.payload.avgRiskScore < 50\" style=\"color: #28a745;\">\n            🟢 Low overall risk - Standard monitoring\n        </div>\n    </div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 630,
+        "y": 1200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "real-time-group",
+        "type": "ui_group",
+        "name": "Real-time Monitoring",
+        "tab": "real-time-tab",
+        "order": 1,
+        "disp": true,
+        "width": 12,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "90c6ec383a38acad",
+        "type": "ui_group",
+        "name": "KPI Dashboard",
+        "tab": "2e095e6e8dd70b13",
+        "order": 1,
+        "disp": true,
+        "width": 12,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "alert-group",
+        "type": "ui_group",
+        "name": "Alert Dashboard",
+        "tab": "alert-tab",
+        "order": 1,
+        "disp": true,
+        "width": 12,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "category-group",
+        "type": "ui_group",
+        "name": "Category Overview",
+        "tab": "category-tab",
+        "order": 1,
+        "disp": true,
+        "width": 12,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "031c5936dd77b435",
+        "type": "ui_group",
+        "name": "Geo",
+        "tab": "2e095e6e8dd70b13",
+        "order": 2,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "real-time-tab",
+        "type": "ui_tab",
+        "name": "Real-time Dashboard",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "2e095e6e8dd70b13",
+        "type": "ui_tab",
+        "name": "Geo",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "alert-tab",
+        "type": "ui_tab",
+        "name": "Alert Dashboard",
+        "icon": "warning",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "category-tab",
+        "type": "ui_tab",
+        "name": "Category Overview",
+        "icon": "folder",
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "de9356d2ace219e1",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-dashboard": "3.6.6"
+        }
+    }
+]
