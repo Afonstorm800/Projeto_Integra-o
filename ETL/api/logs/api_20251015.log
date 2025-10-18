@@ -1,0 +1,6 @@
+2025-10-15 00:21:35,725 - flask_api - INFO - Starting Flask API server...
+2025-10-15 00:21:35,726 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-15 00:21:35,727 - flask_api - INFO - Debug mode: True
+2025-10-15 00:21:36,369 - flask_api - INFO - Starting Flask API server...
+2025-10-15 00:21:36,370 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-15 00:21:36,371 - flask_api - INFO - Debug mode: True

@@ -1,0 +1,142 @@
+2025-10-14 23:24:51,552 - flask_api - INFO - Starting Flask API server...
+2025-10-14 23:24:51,553 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-14 23:24:51,553 - flask_api - INFO - Debug mode: True
+2025-10-14 23:24:51,947 - flask_api - INFO - Starting Flask API server...
+2025-10-14 23:24:51,948 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-14 23:24:51,948 - flask_api - INFO - Debug mode: True
+2025-10-14 23:27:56,001 - flask_api - INFO - Starting Flask API server...
+2025-10-14 23:27:56,002 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-14 23:27:56,002 - flask_api - INFO - Debug mode: True
+2025-10-14 23:27:56,443 - flask_api - INFO - Starting Flask API server...
+2025-10-14 23:27:56,443 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-14 23:27:56,443 - flask_api - INFO - Debug mode: True
+2025-10-14 23:28:29,735 - flask_api - INFO - Starting Flask API server...
+2025-10-14 23:28:29,735 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-14 23:28:29,735 - flask_api - INFO - Debug mode: True
+2025-10-14 23:28:30,099 - flask_api - INFO - Starting Flask API server...
+2025-10-14 23:28:30,099 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-14 23:28:30,099 - flask_api - INFO - Debug mode: True
+2025-10-14 23:28:58,500 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-14 23:28:58,502 - flask_api - INFO - Validated data: 1 records, type: dict
+2025-10-14 23:28:58,502 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-14 23:29:30,576 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-14 23:36:45,782 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-14 23:36:45,785 - flask_api - INFO - Validated data: 1 records, type: dict
+2025-10-14 23:36:45,785 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-14 23:37:17,854 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-14 23:53:48,965 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-14 23:53:48,966 - flask_api - INFO - Validated data: 1 records, type: dict
+2025-10-14 23:53:48,967 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-14 23:53:51,042 - flask_api - INFO - Successfully forwarded data to Node-RED. Response: 200
+2025-10-14 23:58:04,577 - flask_api - INFO - Starting Flask API server...
+2025-10-14 23:58:04,577 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-14 23:58:04,577 - flask_api - INFO - Debug mode: True
+2025-10-14 23:58:17,090 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-14 23:58:17,091 - flask_api - INFO - Validated data: 1 records, type: dict
+2025-10-14 23:58:17,091 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-14 23:58:19,170 - flask_api - INFO - Successfully forwarded data to Node-RED. Response: 200
+2025-10-15 00:11:11,617 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-15 00:11:11,625 - flask_api - ERROR - Unexpected error: 400 Bad Request: Failed to decode JSON object: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\werkzeug\wrappers\request.py", line 614, in get_json
+    rv = self.json_module.loads(data)
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\flask\json\provider.py", line 188, in loads
+    return json.loads(s, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python313\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python313\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\afons\Desktop\Integração_Proj\ETL\api\app.py", line 74, in forward_to_nodered
+    data = request.get_json()
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\werkzeug\wrappers\request.py", line 623, in get_json
+    rv = self.on_json_loading_failed(e)
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\flask\wrappers.py", line 130, in on_json_loading_failed
+    return super().on_json_loading_failed(e)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\werkzeug\wrappers\request.py", line 648, in on_json_loading_failed
+    raise BadRequest(f"Failed to decode JSON object: {e}")
+werkzeug.exceptions.BadRequest: 400 Bad Request: Failed to decode JSON object: Expecting value: line 1 column 1 (char 0)
+2025-10-15 00:25:19,387 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-15 00:25:19,389 - flask_api - ERROR - Unexpected error: 400 Bad Request: Failed to decode JSON object: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\werkzeug\wrappers\request.py", line 614, in get_json
+    rv = self.json_module.loads(data)
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\flask\json\provider.py", line 188, in loads
+    return json.loads(s, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python313\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python313\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\afons\Desktop\Integração_Proj\ETL\api\app.py", line 74, in forward_to_nodered
+    data = request.get_json()
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\werkzeug\wrappers\request.py", line 623, in get_json
+    rv = self.on_json_loading_failed(e)
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\flask\wrappers.py", line 130, in on_json_loading_failed
+    return super().on_json_loading_failed(e)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\werkzeug\wrappers\request.py", line 648, in on_json_loading_failed
+    raise BadRequest(f"Failed to decode JSON object: {e}")
+werkzeug.exceptions.BadRequest: 400 Bad Request: Failed to decode JSON object: Expecting value: line 1 column 1 (char 0)
+2025-10-15 00:34:16,268 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-15 00:34:16,270 - flask_api - ERROR - Unexpected error: 400 Bad Request: Failed to decode JSON object: Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\werkzeug\wrappers\request.py", line 614, in get_json
+    rv = self.json_module.loads(data)
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\flask\json\provider.py", line 188, in loads
+    return json.loads(s, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Python313\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Python313\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\afons\Desktop\Integração_Proj\ETL\api\app.py", line 74, in forward_to_nodered
+    data = request.get_json()
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\werkzeug\wrappers\request.py", line 623, in get_json
+    rv = self.on_json_loading_failed(e)
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\flask\wrappers.py", line 130, in on_json_loading_failed
+    return super().on_json_loading_failed(e)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\afons\AppData\Roaming\Python\Python313\site-packages\werkzeug\wrappers\request.py", line 648, in on_json_loading_failed
+    raise BadRequest(f"Failed to decode JSON object: {e}")
+werkzeug.exceptions.BadRequest: 400 Bad Request: Failed to decode JSON object: Expecting value: line 1 column 1 (char 0)
+2025-10-15 00:34:42,603 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-15 00:34:42,634 - flask_api - INFO - Validated data: 1 records, type: dict
+2025-10-15 00:34:42,636 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-15 00:34:45,152 - flask_api - INFO - Successfully forwarded data to Node-RED. Response: 200
+2025-10-15 00:37:50,007 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-15 00:37:50,015 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-15 00:37:50,015 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-15 00:37:53,093 - flask_api - INFO - Successfully forwarded data to Node-RED. Response: 200
+2025-10-15 00:38:09,449 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-15 00:38:09,452 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-15 00:38:09,452 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-15 00:38:11,518 - flask_api - INFO - Successfully forwarded data to Node-RED. Response: 200

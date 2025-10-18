@@ -1,0 +1,128 @@
+2025-10-17 11:18:57,640 - flask_api - INFO - Starting Flask API server...
+2025-10-17 11:18:57,643 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-17 11:18:57,645 - flask_api - INFO - Debug mode: True
+2025-10-17 11:19:09,430 - flask_api - INFO - Starting Flask API server...
+2025-10-17 11:19:09,478 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-17 11:19:09,524 - flask_api - INFO - Debug mode: True
+2025-10-17 11:32:48,245 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:32:48,255 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:32:48,258 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:32:50,363 - flask_api - INFO - Successfully forwarded data to Node-RED. Response: 200
+2025-10-17 11:33:33,308 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:33:33,314 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:33:33,314 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:34:05,365 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:34:54,524 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:34:54,554 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:34:54,568 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:35:26,687 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:37:23,831 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:37:23,843 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:37:23,844 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:37:55,953 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:37:57,349 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:37:57,368 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:37:57,370 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:37:59,444 - flask_api - ERROR - Node-RED returned error status: 404
+2025-10-17 11:38:10,709 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:38:10,726 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:38:10,728 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:38:12,820 - flask_api - ERROR - Node-RED returned error status: 404
+2025-10-17 11:39:09,065 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:39:09,077 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:39:09,078 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:39:41,157 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:40:18,362 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:40:18,379 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:40:18,382 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:40:50,475 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:40:53,113 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:40:53,124 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:40:53,125 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:41:25,205 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:41:52,930 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:41:52,991 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:41:52,993 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:42:25,089 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:43:04,354 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:43:04,358 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:43:04,359 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:43:36,415 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:43:56,669 - flask_api - INFO - Starting Flask API server...
+2025-10-17 11:43:56,669 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-17 11:43:56,670 - flask_api - INFO - Debug mode: True
+2025-10-17 11:43:57,185 - flask_api - INFO - Starting Flask API server...
+2025-10-17 11:43:57,186 - flask_api - INFO - Node-RED URL: http://localhost:1880
+2025-10-17 11:43:57,186 - flask_api - INFO - Debug mode: True
+2025-10-17 11:44:04,397 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:44:04,408 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:44:04,408 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:44:36,490 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:45:07,422 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:45:07,426 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:45:07,427 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:45:39,486 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:46:27,599 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:46:27,602 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:46:27,603 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:46:59,633 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:47:30,136 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:47:30,139 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:47:30,140 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:48:02,173 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:48:09,301 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:48:09,306 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:48:09,306 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:48:41,353 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:50:20,483 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:50:20,487 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:50:20,487 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:50:52,551 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 11:51:13,956 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 11:51:13,960 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 11:51:13,961 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 11:51:45,997 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 15:22:53,389 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 15:22:53,442 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 15:22:53,463 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 15:23:25,592 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 15:26:17,343 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 15:26:17,351 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 15:26:17,351 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 15:26:49,380 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 15:33:48,745 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 15:33:48,749 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 15:33:48,750 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 15:34:20,818 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 16:08:01,136 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 16:08:01,143 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 16:08:01,145 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 16:08:33,207 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 18:04:40,989 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 18:04:41,017 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 18:04:41,020 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 18:05:13,078 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 20:53:20,116 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 20:53:20,151 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 20:53:20,153 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 20:53:52,259 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 21:04:11,927 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 21:04:11,952 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 21:04:11,954 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 21:04:44,000 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 21:04:54,274 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 21:04:54,279 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 21:04:54,280 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 21:05:26,335 - flask_api - ERROR - Request to Node-RED timed out.
+2025-10-17 21:05:55,815 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 21:05:55,821 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 21:05:55,822 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 21:05:57,928 - flask_api - ERROR - Node-RED returned error status: 404
+2025-10-17 21:06:18,266 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 21:06:18,270 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 21:06:18,270 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 21:06:20,320 - flask_api - ERROR - Node-RED returned error status: 404
+2025-10-17 21:06:53,696 - flask_api - INFO - Received request to forward data to Node-RED
+2025-10-17 21:06:53,700 - flask_api - INFO - Validated data: 68 records, type: list
+2025-10-17 21:06:53,701 - flask_api - INFO - Forwarding data to Node-RED: http://localhost:1880/api/knime-data
+2025-10-17 21:07:25,761 - flask_api - ERROR - Request to Node-RED timed out.
